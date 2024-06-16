@@ -11,9 +11,13 @@ const JWT_SECRET = "your_jwt_secret_key"; // Replace with a strong secret key
 app.use(bodyParser.json());
 app.use(cors());
 
-// In-memory storage for users and services
+// In-memory storage for users, services, and payment methods
 const users = [];
 const services = [];
+const paymentMethods = [];
+
+// Variable to track the global order of services
+let serviceOrder = 0;
 
 // Registration route
 app.post("/cadastro", async (req, res) => {
@@ -69,7 +73,11 @@ app.post("/login", async (req, res) => {
   }
 
   const token = jwt.sign({ id: user.email }, JWT_SECRET, { expiresIn: "1h" });
-  res.json({ status: "sucesso", token });
+  res.json({
+    status: "sucesso",
+    token,
+    user: { email: user.email, nome: user.nome },
+  });
 });
 
 // Middleware to authenticate using JWT
@@ -90,10 +98,19 @@ const authenticate = (req, res, next) => {
 
 // Route to handle service requests
 app.post("/solicitacoes", authenticate, (req, res) => {
-  const { serviceDate, serviceType, serviceDescription } = req.body;
+  const { serviceDate, serviceType, serviceDescription, servicePrice } =
+    req.body;
   const userId = req.user.id;
 
-  const service = { userId, serviceDate, serviceType, serviceDescription };
+  const service = {
+    userId,
+    serviceDate,
+    serviceType,
+    serviceDescription,
+    servicePrice,
+    requestedAt: new Date(),
+    order: serviceOrder++,
+  };
   services.push(service);
 
   res.json({ status: "sucesso", data: service });
@@ -107,25 +124,77 @@ app.get("/solicitacoes", authenticate, (req, res) => {
 });
 
 // Route to change password
-app.post("/trocar-senha", authenticate, async (req, res) => {
-  const { senhaAtual, novaSenha } = req.body;
-  const userId = req.user.id;
+app.post("/trocar-senha", async (req, res) => {
+  const { email, novaSenha, confirmarSenha } = req.body;
 
-  const user = users.find((user) => user.email === userId);
+  const user = users.find((user) => user.email === email);
   if (!user) {
-    return res.status(400).json({ status: "error", message: "User not found" });
-  }
-
-  const isMatch = await bcrypt.compare(senhaAtual, user.senha);
-  if (!isMatch) {
     return res
       .status(400)
-      .json({ status: "error", message: "Senha atual incorreta" });
+      .json({ status: "error", message: "Email não cadastrado" });
+  }
+
+  if (novaSenha !== confirmarSenha) {
+    return res
+      .status(400)
+      .json({ status: "error", message: "As senhas não coincidem" });
   }
 
   const hashedNewPassword = await bcrypt.hash(novaSenha, 10);
   user.senha = hashedNewPassword;
   res.json({ status: "sucesso" });
+});
+
+// Route to get available payment methods
+app.get("/meios-de-pagamento", (req, res) => {
+  res.json(paymentMethods);
+});
+
+// Route to add a payment method (for testing purposes)
+app.post("/meios-de-pagamento", (req, res) => {
+  const { sigla, nome, valorMaximo, meioEletronico } = req.body;
+
+  const existingMethod = paymentMethods.find(
+    (method) => method.sigla === sigla
+  );
+  if (existingMethod) {
+    return res
+      .status(400)
+      .json({ status: "error", message: "Sigla already in use" });
+  }
+
+  const paymentMethod = { sigla, nome, valorMaximo, meioEletronico };
+  paymentMethods.push(paymentMethod);
+  res.json({ status: "sucesso", data: paymentMethod });
+});
+
+// Route to handle service creation with payment methods
+app.post("/servicos/add", authenticate, (req, res) => {
+  const { nome, descricao, valor, meiosDePagamentoIds } = req.body;
+
+  // Filter valid payment methods
+  const validPaymentMethods = paymentMethods.filter(
+    (method) =>
+      method.valorMaximo >= valor && meiosDePagamentoIds.includes(method.sigla)
+  );
+
+  if (validPaymentMethods.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      message:
+        "Nenhum meio de pagamento válido encontrado para o valor do serviço",
+    });
+  }
+
+  const service = {
+    nome,
+    descricao,
+    valor,
+    meiosDePagamento: validPaymentMethods.map((method) => method.sigla),
+  };
+
+  services.push(service);
+  res.status(201).json({ status: "sucesso", data: service });
 });
 
 app.listen(PORT, () => {

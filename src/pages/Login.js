@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 // Define the validation schema using zod
 const loginSchema = z.object({
@@ -40,18 +41,21 @@ const Login = () => {
 
       await login(data.email, data.senha).then((res) => {
         if (res.data.status === "sucesso") {
-          alert("Login realizado com sucesso!");
-          // Armazene o token no localStorage ou cookie, conforme necessário
+          toast.success("Login realizado com sucesso!");
+          localStorage.setItem("token", res.data.token);
+          localStorage.setItem("user", JSON.stringify(res.data.user));
           localStorage.setItem("token", res.data.token);
         } else {
-          alert("Email ou senha inválidos");
+          toast.error("Email ou senha inválidos");
         }
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         alert(error.errors.map((err) => err.message).join("\n"));
       } else {
-        alert("Houve um erro ao realizar o login.");
+        toast.error(
+          "Houve um erro ao realizar o login. " + error.response.data.message
+        );
       }
     }
   };
@@ -77,9 +81,14 @@ const Login = () => {
         <button type="submit" className="btn btn-primary">
           Login
         </button>
+        <button type="reset">Limpar</button>
       </form>
-      <Link to="/cadastro">Cadastrar-se</Link>
-      <Link to="/trocar-senha">Esqueci minha senha</Link>
+      <li>
+        <Link to="/cadastro">Cadastrar-se</Link>
+      </li>
+      <li>
+        <Link to="/trocar-senha">Esqueci minha senha</Link>
+      </li>
     </div>
   );
 };
