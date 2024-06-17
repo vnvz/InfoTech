@@ -98,21 +98,30 @@ const authenticate = (req, res, next) => {
 
 // Route to handle service requests
 app.post("/solicitacoes", authenticate, (req, res) => {
-  const { serviceDate, serviceType, serviceDescription, servicePrice } =
-    req.body;
+  const { serviceDate, serviceType, serviceDescription } = req.body;
   const userId = req.user.id;
+
+  const serviceTemplate = services.find(
+    (service) => service.nome === serviceType
+  );
+  if (!serviceTemplate) {
+    return res
+      .status(404)
+      .json({ status: "error", message: "Serviço não encontrado" });
+  }
 
   const service = {
     userId,
     serviceDate,
     serviceType,
     serviceDescription,
-    servicePrice,
+    servicePrice: serviceTemplate.valor,
+    duration: serviceTemplate.dias,
     requestedAt: new Date(),
     order: serviceOrder++,
   };
-  services.push(service);
 
+  services.push(service);
   res.json({ status: "sucesso", data: service });
 });
 
@@ -168,33 +177,64 @@ app.post("/meios-de-pagamento", (req, res) => {
   res.json({ status: "sucesso", data: paymentMethod });
 });
 
-// Route to handle service creation with payment methods
+// Rota para adicionar serviço
 app.post("/servicos/add", authenticate, (req, res) => {
-  const { nome, descricao, valor, meiosDePagamentoIds } = req.body;
+  const { nome, dias, valor } = req.body;
 
-  // Filter valid payment methods
-  const validPaymentMethods = paymentMethods.filter(
-    (method) =>
-      method.valorMaximo >= valor && meiosDePagamentoIds.includes(method.sigla)
-  );
-
-  if (validPaymentMethods.length === 0) {
-    return res.status(400).json({
-      status: "error",
-      message:
-        "Nenhum meio de pagamento válido encontrado para o valor do serviço",
-    });
+  // Validação para garantir que o serviço não exista
+  const existingService = services.find((service) => service.nome === nome);
+  if (existingService) {
+    return res
+      .status(400)
+      .json({ status: "error", message: "Nome do serviço já em uso" });
   }
 
   const service = {
     nome,
-    descricao,
+    dias,
     valor,
-    meiosDePagamento: validPaymentMethods.map((method) => method.sigla),
   };
 
   services.push(service);
   res.status(201).json({ status: "sucesso", data: service });
+});
+
+// Rota para obter todos os serviços
+app.get("/api/servicos", (req, res) => {
+  res.json(services);
+});
+
+// Rota para obter informações do usuário
+app.get("/user-info", authenticate, (req, res) => {
+  const userId = req.user.id;
+  const user = users.find((user) => user.email === userId);
+  if (!user) {
+    return res
+      .status(404)
+      .json({ status: "error", message: "Usuário não encontrado" });
+  }
+  res.json({ status: "sucesso", data: { email: user.email, nome: user.nome } });
+});
+
+// Rota para cancelar serviço
+app.delete("/solicitacoes/:id", authenticate, (req, res) => {
+  const { id } = req.params;
+  const index = services.findIndex(
+    (service) => service.order === parseInt(id, 10)
+  );
+  if (index !== -1) {
+    services.splice(index, 1);
+    res.json({ status: "sucesso", message: "Serviço cancelado com sucesso" });
+  } else {
+    res
+      .status(404)
+      .json({ status: "error", message: "Serviço não encontrado" });
+  }
+});
+
+// Rota para obter métodos de pagamento
+app.get("/meios-de-pagamento", (req, res) => {
+  res.json(paymentMethods);
 });
 
 app.listen(PORT, () => {

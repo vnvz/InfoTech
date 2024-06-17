@@ -10,14 +10,15 @@ import ViewServices from "./pages/ServicosSolicitados";
 import CadastroPagamento from "./pages/CadastroPagamento";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/IsAuth";
-import UserInfo from "./components/UserInfo";
+import Footer from "./components/Footer";
+import CriacaoServico from "./pages/CriarServicos";
 
 const App = () => (
   <Router>
     <div className="App">
       <Toaster />
       <Sidenav />
-      <UserInfo />
+
       <div className="content">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -39,8 +40,13 @@ const App = () => (
             path="/cadastro-pagamento"
             element={<ProtectedRoute component={CadastroPagamento} />}
           />
+          <Route
+            path="/criar-servicos"
+            element={<ProtectedRoute component={CriacaoServico} />}
+          />
         </Routes>
       </div>
+      <Footer />
     </div>
   </Router>
 );

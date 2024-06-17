@@ -1,105 +1,137 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import axios from "axios";
-
-const schema = z.object({
-  serviceDate: z.preprocess(
-    (arg) => new Date(arg),
-    z
-      .date()
-      .refine((date) => !isNaN(date.getTime()), { message: "Data inválida" })
-  ),
-  serviceType: z.enum(
-    ["installation", "maintenance", "support", "consulting"],
-    { required_error: "Selecione um tipo de serviço" }
-  ),
-  serviceDescription: z.string().nonempty({ message: "Campo obrigatório" }),
-});
+import toast, { Toaster } from "react-hot-toast";
 
 const SolicitacaoServicos = () => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(schema),
-  });
+  const { register, handleSubmit, watch, reset } = useForm();
+  const [servicos, setServicos] = useState([]);
+  const [meiosPagamento, setMeiosPagamento] = useState([]);
+  const [filteredMeiosPagamento, setFilteredMeiosPagamento] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const solicitarServico = async (data) => {
-    const token = localStorage.getItem("token"); // Assumindo que o token JWT está armazenado no localStorage
-    return await axios.post("http://localhost:5000/solicitacoes", data, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  };
+  const selectedServiceType = watch("serviceType");
+
+  useEffect(() => {
+    const fetchServicos = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/servicos", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setServicos(response.data);
+      } catch (error) {
+        toast.error("Erro ao carregar os serviços");
+      }
+    };
+
+    const fetchMeiosPagamento = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/meios-de-pagamento"
+        );
+        setMeiosPagamento(response.data);
+      } catch (error) {
+        toast.error("Erro ao carregar os meios de pagamento");
+      }
+    };
+
+    fetchServicos();
+    fetchMeiosPagamento();
+  }, []);
+
+  useEffect(() => {
+    if (selectedServiceType) {
+      const selectedService = servicos.find(
+        (servico) => servico.nome === selectedServiceType
+      );
+      if (selectedService) {
+        const filtered = meiosPagamento.filter(
+          (meio) => meio.valorMaximo >= selectedService.valor
+        );
+        setFilteredMeiosPagamento(filtered);
+      }
+    }
+  }, [selectedServiceType, servicos, meiosPagamento]);
 
   const onSubmit = async (data) => {
     try {
-      schema.parse(data);
-
-      await solicitarServico(data).then((res) => {
-        if (res.data.status === "sucesso") {
-          alert("Solicitação realizada com sucesso!");
-        } else {
-          alert("Erro ao realizar solicitação");
-        }
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      await axios.post("http://localhost:5000/solicitacoes", data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+      toast.success("Serviço solicitado com sucesso!");
+      reset();
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        alert(error.errors.map((err) => err.message).join("\n"));
-      } else {
-        alert("Houve um erro ao realizar a solicitação.");
-      }
+      toast.error(
+        "Erro ao solicitar serviço. Tente novamente. " + error.message
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="content">
-      <h2>Solicitação de Serviços</h2>
+    <div className="container">
+      <h2>Solicitar Serviço</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="form-group">
-          <label htmlFor="serviceDate">Data da Solicitação:</label>
-          <input type="date" id="serviceDate" {...register("serviceDate")} />
-          {errors.serviceDate && (
-            <span className="error-message">{errors.serviceDate.message}</span>
-          )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="serviceType">Tipo de Serviço:</label>
-          <select id="serviceType" {...register("serviceType")}>
-            <option value="installation">Instalação</option>
-            <option value="maintenance">Manutenção</option>
-            <option value="support">Suporte Técnico</option>
-            <option value="consulting">Consultoria</option>
+          <label htmlFor="serviceType">Tipo de Serviço</label>
+          <select
+            id="serviceType"
+            {...register("serviceType")}
+            className="form-control"
+          >
+            <option value="">Selecione um serviço</option>
+            {servicos.map((servico) => (
+              <option key={servico.nome} value={servico.nome}>
+                {servico.nome}
+              </option>
+            ))}
           </select>
-          {errors.serviceType && (
-            <span className="error-message">{errors.serviceType.message}</span>
-          )}
         </div>
         <div className="form-group">
-          <label htmlFor="serviceDescription">Descrição do Serviço:</label>
+          <label htmlFor="serviceDescription">Descrição do Serviço</label>
           <textarea
             id="serviceDescription"
-            rows="4"
             {...register("serviceDescription")}
-          ></textarea>
-          {errors.serviceDescription && (
-            <span className="error-message">
-              {errors.serviceDescription.message}
-            </span>
-          )}
+            className="form-control"
+          />
         </div>
         <div className="form-group">
-          <button type="submit">Solicitar Serviço</button>
-          <button type="reset">Limpar</button>
-          <button type="button" onClick={() => window.history.back()}>
-            Voltar
-          </button>
+          <label htmlFor="serviceDate">Data do Serviço</label>
+          <input
+            type="date"
+            id="serviceDate"
+            {...register("serviceDate")}
+            className="form-control"
+          />
         </div>
+        <div className="form-group">
+          <label htmlFor="paymentMethod">Meio de Pagamento</label>
+          <select
+            id="paymentMethod"
+            {...register("paymentMethod")}
+            className="form-control"
+          >
+            <option value="">Selecione um meio de pagamento</option>
+            {filteredMeiosPagamento.map((meio) => (
+              <option key={meio.sigla} value={meio.sigla}>
+                {meio.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? "Solicitando..." : "Solicitar Serviço"}
+        </button>
       </form>
+      <Toaster />
     </div>
   );
 };

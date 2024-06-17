@@ -1,7 +1,7 @@
 const UserInfo = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (!user) {
-    return <div>Usuário não encontrado</div>;
+    return <div className="user-info">Usuário não encontrado</div>;
   }
 
   return (
