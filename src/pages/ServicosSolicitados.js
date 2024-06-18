@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 const ViewServices = () => {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -24,7 +23,7 @@ const ViewServices = () => {
           setServices(response.data.data);
         } catch (error) {
           console.error("Erro ao buscar serviços", error);
-          alert("Erro ao buscar serviços");
+          toast.error("Erro ao buscar serviços");
         }
       } else {
         alert("Você precisa estar logado para ver os serviços solicitados");
@@ -60,7 +59,6 @@ const ViewServices = () => {
 
   const handleCancel = (service) => {
     setSelectedService(service);
-    setShowModal(true);
   };
 
   const confirmCancel = async () => {
@@ -77,7 +75,6 @@ const ViewServices = () => {
       setServices(
         services.filter((service) => service.order !== selectedService.order)
       );
-      setShowModal(false);
       toast.success("Serviço cancelado com sucesso");
     } catch (error) {
       toast.error("Erro ao cancelar o serviço. Tente novamente.");
@@ -85,7 +82,7 @@ const ViewServices = () => {
   };
 
   return (
-    <div className="content">
+    <div className="servicos-solicitados">
       <h2>Serviços Solicitados</h2>
       <table>
         <thead>
@@ -120,7 +117,7 @@ const ViewServices = () => {
           ))}
         </tbody>
       </table>
-      <button className="btn btn-danger" onClick={confirmCancel}>
+      <button className="btn btn-primary" onClick={confirmCancel}>
         Cancelar Selecionados
       </button>
     </div>

@@ -3,7 +3,7 @@ import formaPagamento1 from "../img/formas_pagamento/forma_pagamento1.png";
 import formaPagamento2 from "../img/formas_pagamento/forma_pagamento2.png";
 
 const Footer = () => (
-  <footer class="container">
+  <footer class="footer">
     <div class="info">
       <h4>Informações de Contato</h4>
       <p>Telefone: (81) 3422-1234</p>

@@ -43,7 +43,7 @@ const CriacaoServico = () => {
   };
 
   return (
-    <div className="container">
+    <div className="criar-servico">
       <h2>Criar Serviço</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="form-group">
