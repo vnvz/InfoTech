@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 // Define the validation schema using zod
 const cadastroSchema = z
@@ -68,16 +69,20 @@ const Cadastro = () => {
 
       await cadastrar(data).then((res) => {
         if (res.data.status === "sucesso") {
-          alert("Usuário cadastrado com sucesso!");
+          toast.success("Cadastro realizado com sucesso!");
         } else {
-          alert("Email já em uso!");
+          toast.error(
+            "Houve um erro na criação do usuário. " + res.data.message
+          );
         }
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         alert(error.errors.map((err) => err.message).join("\n"));
       } else {
-        alert("Houve um erro na criação do usuário.");
+        toast.error(
+          "Houve um erro na criação do usuário. " + error.response.data.message
+        );
       }
     }
   };
@@ -170,6 +175,7 @@ const Cadastro = () => {
         <button type="submit" className="btn btn-primary">
           Cadastrar
         </button>
+        <button type="reset">Limpar</button>
       </form>
     </div>
   );

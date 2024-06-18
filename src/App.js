@@ -7,11 +7,18 @@ import SolicitacaoServicos from "./pages/SolicitacaoServicos";
 import TrocarSenha from "./pages/TrocarSenha";
 import Sidenav from "./components/Sidenav";
 import ViewServices from "./pages/ServicosSolicitados";
+import CadastroPagamento from "./pages/CadastroPagamento";
+import { Toaster } from "react-hot-toast";
+import ProtectedRoute from "./components/IsAuth";
+import Footer from "./components/Footer";
+import CriacaoServico from "./pages/CriarServicos";
 
 const App = () => (
   <Router>
     <div className="App">
+      <Toaster />
       <Sidenav />
+
       <div className="content">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -19,12 +26,27 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route
             path="/solicitacao-servicos"
-            element={<SolicitacaoServicos />}
+            element={<ProtectedRoute component={SolicitacaoServicos} />}
           />
-          <Route path="/trocar-senha" element={<TrocarSenha />} />
-          <Route path="/servicos-solicitados" element={<ViewServices />} />
+          <Route
+            path="/trocar-senha"
+            element={<ProtectedRoute component={TrocarSenha} />}
+          />
+          <Route
+            path="/servicos-solicitados"
+            element={<ProtectedRoute component={ViewServices} />}
+          />
+          <Route
+            path="/cadastro-pagamento"
+            element={<ProtectedRoute component={CadastroPagamento} />}
+          />
+          <Route
+            path="/criar-servicos"
+            element={<ProtectedRoute component={CriacaoServico} />}
+          />
         </Routes>
       </div>
+      <Footer />
     </div>
   </Router>
 );

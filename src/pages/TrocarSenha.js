@@ -1,29 +1,27 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const schema = z
   .object({
-    senhaAtual: z
-      .string()
-      .min(6, { message: "Senha atual deve ter pelo menos 6 caracteres" }),
+    email: z.string().email("Email inválido").nonempty("O email é obrigatório"),
     novaSenha: z
       .string()
-      .min(6, { message: "A senha deve ter pelo menos 6 caracteres" })
-      .regex(/[0-9]/, { message: "A senha deve conter pelo menos um número" })
-      .regex(/[A-Z]/, {
-        message: "A senha deve conter pelo menos uma letra maiúscula",
-      })
-      .regex(/[@#$%&*!?/\\|+\-_=]/, {
-        message: "A senha deve conter pelo menos um caractere especial",
-      }),
-    confirmarSenha: z.string().min(6, { message: "Confirme sua nova senha" }),
+      .min(6, "A senha deve ter pelo menos 6 caracteres")
+      .regex(/[0-9]/, "A senha deve conter pelo menos um número")
+      .regex(/[A-Z]/, "A senha deve conter pelo menos uma letra maiúscula")
+      .regex(
+        /[@#$%&*!?/\\|+\-=._]/,
+        "A senha deve conter pelo menos um caractere especial (@ # $ % & * ! ? / \\ | - _ + . =)"
+      ),
+    confirmarSenha: z.string().nonempty("A confirmação da senha é obrigatória"),
   })
   .refine((data) => data.novaSenha === data.confirmarSenha, {
     message: "As senhas não coincidem",
-    path: ["confirmarSenha"], // path of error
+    path: ["confirmarSenha"],
   });
 
 const TrocarSenha = () => {
@@ -37,58 +35,51 @@ const TrocarSenha = () => {
 
   const onSubmit = async (data) => {
     try {
-      const token = localStorage.getItem("token"); // Assuming the JWT token is stored in localStorage
       const response = await axios.post(
         "http://localhost:5000/trocar-senha",
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        data
       );
       if (response.data.status === "sucesso") {
-        alert("Senha trocada com sucesso!");
-      } else {
-        alert("Erro ao trocar senha");
+        toast.success("Senha trocada com sucesso!");
       }
     } catch (error) {
-      console.error("Erro ao trocar senha", error);
-      alert("Erro ao trocar senha");
+      toast.error("Erro ao trocar senha. " + error.response.data.message);
     }
   };
 
   return (
-    <div className="esqueceu-senha-container">
+    <div className="trocar-senha-container container">
       <h2>Trocar Senha</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="esqueceu-senha-form">
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className="form-group">
-          <label htmlFor="senhaAtual">Senha Atual</label>
-          <input type="password" id="senhaAtual" {...register("senhaAtual")} />
-          {errors.senhaAtual && (
-            <p className="error-message">{errors.senhaAtual.message}</p>
+          <label>Email</label>
+          <input type="email" {...register("email")} />
+          {errors.email && (
+            <p className="error-message">{errors.email.message}</p>
           )}
         </div>
         <div className="form-group">
-          <label htmlFor="novaSenha">Nova Senha</label>
-          <input type="password" id="novaSenha" {...register("novaSenha")} />
+          <label>Nova Senha</label>
+          <input type="password" {...register("novaSenha")} />
           {errors.novaSenha && (
             <p className="error-message">{errors.novaSenha.message}</p>
           )}
+          <small className="form-text text-muted">
+            A senha deve ter pelo menos 6 caracteres, sendo pelo menos: um dos
+            caracteres numérico, um dos caracteres letra maiúscula, e um dos
+            caracteres especiais abaixo.
+            <br />@ # $ % & * ! ? / \ | - _ + . =
+          </small>
         </div>
         <div className="form-group">
-          <label htmlFor="confirmarSenha">Confirmar Nova Senha</label>
-          <input
-            type="password"
-            id="confirmarSenha"
-            {...register("confirmarSenha")}
-          />
+          <label>Confirmar Nova Senha</label>
+          <input type="password" {...register("confirmarSenha")} />
           {errors.confirmarSenha && (
             <p className="error-message">{errors.confirmarSenha.message}</p>
           )}
         </div>
         <button type="submit" className="btn btn-primary">
-          Atualizar Senha
+          Trocar Senha
         </button>
       </form>
     </div>
